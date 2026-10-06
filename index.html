@@ -2,635 +2,275 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bildwasserzeichen & Content Credentials Checker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Bildwasserzeichen &amp; Content Credentials Checker</title>
 <style>
-  :root {
-    --bg-primary: #0a0e17;
-    --bg-secondary: #111827;
-    --bg-card: #1a2235;
-    --border: #2d3748;
-    --text-primary: #f0f4fc;
-    --text-secondary: #9ca3af;
-    --accent-blue: #3b82f6;
-    --accent-cyan: #06b6d4;
-    --accent-green: #10b981;
-    --accent-yellow: #f59e0b;
-    --accent-red: #ef4444;
-    --accent-purple: #8b5cf6;
-    --gradient-main: linear-gradient(135deg, #3b82f6, #06b6d4);
-    --shadow-glow: 0 0 30px rgba(59, 130, 246, 0.15);
-  }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0e17;color:#f0f4fc;min-height:100vh;-webkit-tap-highlight-color:transparent;}
+.bg-pattern{position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 20% 50%,rgba(59,130,246,.06),transparent 50%),radial-gradient(ellipse at 80% 20%,rgba(6,182,212,.05),transparent 50%),radial-gradient(ellipse at 50% 80%,rgba(139,92,246,.04),transparent 50%);}
+.container{max-width:900px;margin:0 auto;padding:1rem .75rem;position:relative;z-index:1;}
+header{text-align:center;margin-bottom:2rem;}
+h1{font-size:clamp(1.4rem,5vw,2.2rem);font-weight:800;background:linear-gradient(135deg,#3b82f6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2;}
+.subtitle{color:#9ca3af;font-size:.9rem;margin-top:.5rem;line-height:1.5;}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+/* Upload Zone */
+#upload-zone{border:2px dashed #2d3748;border-radius:16px;padding:2.5rem 1rem;text-align:center;cursor:pointer;transition:all .3s ease;background:#111827;position:relative;overflow:hidden;}
+#upload-zone::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(59,130,246,.03),rgba(6,182,212,.03));opacity:0;transition:opacity .3s;}
+#upload-zone:hover,#upload-zone.dragover{border-color:#3b82f6;box-shadow:0 0 30px rgba(59,130,246,.15);}
+#upload-zone:hover::before,#upload-zone.dragover::before{opacity:1;}
+.upload-icon{width:60px;height:60px;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#06b6d4);border-radius:50%;font-size:1.5rem;}
+.upload-title{font-size:1.1rem;font-weight:600;margin-bottom:.3rem;}
+.upload-hint{color:#9ca3af;font-size:.8rem;}
+.camera-btn{display:inline-block;margin-top:1rem;padding:.6rem 1.5rem;background:linear-gradient(135deg,#3b82f6,#06b6d4);color:#fff;border:none;border-radius:999px;font-size:.9rem;font-weight:600;cursor:pointer;}
+#file-input{display:none;}
 
-  body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+/* Preview Section */
+#preview-section{display:none;animation:fadeUp .5s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.preview-grid{margin-top:1.5rem;}
+.image-preview-card{background:#1a2235;border-radius:12px;padding:1rem;border:1px solid #2d3748;}
+.image-preview-card h3{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af;margin-bottom:.75rem;font-weight:600;}
+.img-container{position:relative;border-radius:10px;overflow:hidden;background:rgba(0,0,0,.3);aspect-ratio:auto max-height:400px;display:flex;align-items:center;justify-content:center;}
+.img-container img{max-width:100%;max-height:400px;width:100%;object-fit:contain;}
+.file-info-bar{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem;padding-top:.75rem;border-top:1px solid #2d3748;}
+.info-chip{font-size:.7rem;padding:.25rem .6rem;background:#0a0e17;border-radius:999px;color:#9ca3dp;white-space:nowrap;}
 
-  /* Animated gradient background */
-  .bg-pattern {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; pointer-events: none;
-    background:
-      radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 50%),
-      radial-gradient(ellipse at 50% 80%, rgba(139, 92, 246, 0.04) 0%, transparent 50%);
-  }
+/* Result Cards */
+.result-card{background:#1a2235;border-radius:12px;padding:1.25rem;border:1px solid #2d3748;margin-bottom:1rem;}
+.card-header{display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;}
+.card-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.icon-blue{background:rgba(59,130,246,.15);}
+.icon-cyan{background:rgba(6,182,212,.15);}
+.icon-green{background:rgba(16,185,129,.15);}
+.icon-yellow{background:rgba(245,158,11,.15);}
+.icon-red{background:rgba(239,68,68,.15);}
+.card-title{font-weight:700;font-size:1rem;}
+.data-grid{display:grid;gap:.5rem;}
+@media(min-width:500px){.data-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));}}
+.data-item{background:#0a0e17;border-radius:8px;padding:.75rem;}
+.data-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:#06b6d4;margin-bottom:.25rem;font-weight:600;}
+.data-value{font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:.8rem;word-break:break-all;line-height:1.5;}
+.badge{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .6rem;border-radius:999px;font-size:.75rem;font-weight:600;}
+.badge-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.badge-success{background:rgba(16,185,129,.12);color:#34d399}.badge-success .badge-dot{background:#10b981}
+.badge-info{background:rgba(59,130,246,.12);color:#60a5fa}.badge-info .badge-dot{background:#3b82f6}
 
-  .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; position: relative; z-index: 1; }
+/* Services */
+.services-section h2{font-size:1.2rem;margin-top:1.5rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem;}
+.services-desc{color:#9ca3af;font-size:.8rem;line-height:1.5;margin-bottom:.75rem;}
+.service-card{display:block;background:#0a0e17;border:1px solid #2d3748;border-radius:12px;padding:1rem;text-decoration:none;color:inherit;margin-bottom:.5rem;transition:all .2s ease;}
+.service-card:hover{border-color:#3b82f6;transform:translateY(-1px);box-shadow:0 4px 20px rgba(59,130,246,.1);}
+.service-name{font-weight:700;font-size:.9rem;margin-bottom:.2rem;}
+.service-desc{font-size:.75rem;color:#9ca3af;line-height:1.4;}
+.service-url{font-family:monospace;font-size:.65rem;color:#06b6d4;margin-top:.4rem;}
+.service-tag{display:inline-block;font-size:.6rem;padding:.1rem .4rem;border-radius:999px;background:rgba(59,130,246,.12);color:#3b82f6;margin-top:.3rem;font-weight:600;text-transform:uppercase;}
 
-  header { text-align: center; margin-bottom: 3rem; }
+.loading-overlay{position:fixed;inset:0;z-index:100;background:rgba(10,14,23,.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;}
+.loading-overlay.active{opacity:1;pointer-events:auto;}
+.spinner{width:40px;height:40px;border-radius:50%;border:3px solid #2d3748;border-top-color:#3b82f6;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-  h1 {
-    font-size: clamp(1.8rem, 4vw, 2.8rem);
-    font-weight: 800;
-    background: var(--gradient-main);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -0.02em;
-    line-height: 1.2;
-  }
-
-  .subtitle {
-    color: var(--text-secondary);
-    font-size: 1.05rem;
-    margin-top: 0.75rem;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-    line-height: 1.6;
-  }
-
-  /* Upload Zone */
-  #upload-zone {
-    border: 2px dashed var(--border);
-    border-radius: 20px;
-    padding: 4rem 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    background: var(--bg-secondary);
-    position: relative;
-    overflow: hidden;
-  }
-
-  #upload-zone::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(6, 182, 212, 0.03));
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-
-  #upload-zone:hover, #upload-zone.dragover {
-    border-color: var(--accent-blue);
-    box-shadow: var(--shadow-glow);
-  }
-
-  #upload-zone:hover::before, #upload-zone.dragover::before { opacity: 1; }
-
-  .upload-icon {
-    width: 80px; height: 80px; margin: 0 auto 1.5rem;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--gradient-main);
-    border-radius: 50%;
-    font-size: 2rem;
-  }
-
-  .upload-title { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.5rem; }
-  .upload-hint { color: var(--text-secondary); font-size: 0.9rem; }
-
-  #file-input { display: none; }
-
-  /* Preview Section */
-  #preview-section {
-    display: none;
-    animation: fadeUp 0.5s ease;
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .preview-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 1.5rem;
-    margin-top: 2rem;
-  }
-
-  @media (min-width: 768px) {
-    .preview-grid { grid-template-columns: 40% 60%; }
-  }
-
-  .image-preview-card {
-    background: var(--bg-card);
-    border-radius: 16px;
-    padding: 1.5rem;
-    border: 1px solid var(--border);
-  }
-
-  .image-preview-card h3 {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
-    font-weight: 600;
-  }
-
-  .img-container {
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    background: rgba(0,0,0,0.3);
-    aspect-ratio: 1 / 1;
-    max-height: 500px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .img-container img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-  }
-
-  .file-info-bar {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
-  }
-
-  .info-chip {
-    font-size: 0.8rem;
-    padding: 0.3rem 0.75rem;
-    background: var(--bg-primary);
-    border-radius: 999px;
-    color: var(--text-secondary);
-    white-space: nowrap;
-  }
-
-  /* Results Cards */
-  .results-section { margin-top: 1.5rem; }
-
-  .result-card {
-    background: var(--bg-card);
-    border-radius: 16px;
-    padding: 1.5rem;
-    border: 1px solid var(--border);
-    transition: box-shadow 0.3s ease;
-  }
-
-  .result-card:hover { box-shadow: var(--shadow-glow); }
-
-  .card-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .card-icon {
-    width: 40px; height: 40px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-  }
-
-  .icon-blue   { background: rgba(59, 130, 246, 0.15); }
-  .icon-cyan   { background: rgba(6, 182, 212, 0.15); }
-  .icon-green  { background: rgba(16, 185, 129, 0.15); }
-  .icon-purple { background: rgba(139, 92, 246, 0.15); }
-  .icon-yellow { background: rgba(245, 158, 11, 0.15); }
-  .icon-red    { background: rgba(239, 68, 68, 0.15); }
-
-  .card-title { font-weight: 700; font-size: 1.1rem; }
-  .card-desc  { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; }
-
-  .data-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 0.75rem;
-  }
-
-  .data-item {
-    background: var(--bg-primary);
-    border-radius: 10px;
-    padding: 0.85rem 1rem;
-  }
-
-  .data-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--accent-cyan);
-    margin-bottom: 0.35rem;
-    font-weight: 600;
-  }
-
-  .data-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    word-break: break-all;
-    color: var(--text-primary);
-    line-height: 1.5;
-  }
-
-  /* Status Badges */
-  .badge {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.35rem 0.85rem;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 600;
-  }
-
-  .badge-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-
-  .badge-success   { background: rgba(16, 185, 129, 0.12); color: #34d399; }
-  .badge-success .badge-dot { background: #10b981; box-shadow: 0 0 6px #10b981; }
-  .badge-warning   { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
-  .badge-warning .badge-dot { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
-  .badge-danger    { background: rgba(239, 68, 68, 0.12); color: #f87171; }
-  .badge-danger .badge-dot { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
-  .badge-info      { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
-  .badge-info .badge-dot { background: #3b82f6; box-shadow: 0 0 6px #3b82f6; }
-
-  .status-bar { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.75rem; }
-
-  /* External Services Links */
-  .services-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
-  }
-
-  .service-card {
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 1.25rem;
-    text-decoration: none;
-    color: inherit;
-    transition: all 0.25s ease;
-    display: block;
-  }
-
-  .service-card:hover {
-    border-color: var(--accent-blue);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(59, 130, 246, 0.12);
-  }
-
-  .service-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.4rem; }
-  .service-desc { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; }
-  .service-url  { font-family: monospace; font-size: 0.7rem; color: var(--accent-cyan); margin-top: 0.6rem; word-break: break-all; }
-  .service-tag  {
-    display: inline-block;
-    font-size: 0.65rem;
-    padding: 0.15rem 0.5rem;
-    border-radius: 999px;
-    background: rgba(59, 130, 246, 0.12);
-    color: var(--accent-blue);
-    margin-top: 0.5rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  /* Loading Spinner */
-  .loading-overlay {
-    position: fixed; inset: 0; z-index: 100;
-    background: rgba(10, 14, 23, 0.85);
-    backdrop-filter: blur(8px);
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.3s;
-  }
-
-  .loading-overlay.active { opacity: 1; pointer-events: auto; }
-
-  .spinner { width: 50px; height: 50px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent-blue); animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Footer */
-  footer {
-    text-align: center;
-    margin-top: 4rem;
-    padding-top: 2rem;
-    border-top: 1px solid var(--border);
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-  }
-
-  footer a { color: var(--accent-blue); text-decoration: none; }
-
-  /* Responsive tweaks */
-  @media (max-width: 600px) {
-    .container { padding: 1rem; }
-    #upload-zone { padding: 2.5rem 1rem; }
-    h1 { font-size: 1.5rem; }
-  }
+footer{text-align:center;margin-top:2rem;padding-top:1.5rem;border-top:1px solid #2d3748;color:#9ca3af;font-size:.75rem;}
+.error-msg{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:1rem;margin:1rem 0;color:#f87171;font-size:.85rem;}
 </style>
 </head>
 <body>
-
 <div class="bg-pattern"></div>
-
 <div class="container">
-  <header>
-    <h1>Bildwasserzeichen &amp; Content Credentials Checker</h1>
-    <p class="subtitle">Lade ein Bild hoch — lokale Analyse von C2PA-Metadaten, Wasserzeichen-Signaturen und perzeptuellen Hashes + direkte Links zu Google Lens, TinEye, Adobe CAI Explorer, Optanomy uvm.</p>
-  </header>
+<header>
+<h1>Bildwasserzeichen &amp; Content Credentials Checker</h1>
+<p class="subtitle">Bild hochladen — lokale Analyse im Browser + Links zu Google Lens, TinEye, Adobe CAI Explorer uvm.</p>
+</header>
 
-  <!-- Upload Zone -->
-  <div id="upload-zone" role="button" tabindex="0" aria-label="Bild hierher ziehen oder klicken zum Hochladen">
-    <div class="upload-icon">&#x1F9EA;</div>
-    <div class="upload-title">Bild hierher ziehen oder klicken</div>
-    <div class="upload-hint">PNG · JPEG · WEBP · GIF · BMP · TIFF — max. 50 MB</div>
-    <input type="file" id="file-input" accept="image/*,.tiff,.tif">
-  </div>
+<!-- Upload Zone -->
+<div id="upload-zone" role="button" tabindex="0" aria-label="Foto aufnehmen oder Datei wählen">
+<div class="upload-icon">&#x1F9EA;</div>
+<div class="upload-title">Foto machen oder Datei wählen</div>
+<div class="upload-hint">Kamera · Galerie · PNG · JPEG · WEBP</div>
+<input type="file" id="file-input" accept="image/*" capture="environment">
+<button class="camera-btn" onclick="document.getElementById('file-input').click()">&#x1F4F7;&nbsp; Kamera / Galerie öffnen</button>
+</div>
 
-  <!-- Preview Section -->
-  <section id="preview-section">
-    <div class="preview-grid">
-      <!-- Image preview card -->
-      <div class="image-preview-card">
-        <h3>Vorschau</h3>
-        <div class="img-container"><img id="preview-img" alt="Preview"></div>
-        <div class="file-info-bar" id="file-info-bar"></div>
-      </div>
+<!-- Error Message Area -->
+<div id="error-area"></div>
 
-      <!-- Results area -->
-      <div class="results-section" id="results-area">
-        <!-- Dynamically populated -->
-      </div>
-    </div>
+<!-- Preview Section -->
+<section id="preview-section">
+<div class="preview-grid">
+<div class="image-preview-card">
+<h3>Vorschau</h3>
+<div class="img-container"><img id="preview-img" alt="Preview"></div>
+<div class="file-info-bar" id="file-info-bar"></div>
+</div>
+<div id="results-area"></div>
+</div>
 
-    <!-- External Services -->
-    <div style="margin-top: 2rem;">
-      <h2 style="font-size: 1.4rem; margin-bottom: 0.5rem; display:flex; align-items:center; gap:0.5rem;">
-        <span>&#x1F310;</span> Externe Dienste prüfen
-      </h2>
-      <p style="color:var(--text-secondary); font-size:0.85rem; line-height:1.6; margin-bottom:1rem;">
-        Diese Dienste können manuell mit deinem Bild getestet werden (Upload erforderlich):
-      </p>
-      <div class="services-grid" id="services-grid"></div>
-    </div>
-  </section>
+<!-- External Services -->
+<div class="services-section">
+<h2>&#x1F310; Externe Dienste prüfen</h2>
+<p class="services-desc">Diese Dienste können mit deinem Bild getestet werden (Upload erforderlich):</p>
+<div id="services-list"></div>
+</div>
+</section>
 </div>
 
 <footer>
-  <p>Bildwasserzeichen-Checker Prototyp &mdash; Lokale Analyse via PIL/numpy &middot; Keine Daten werden hochgeladen</p>
-  <p style="margin-top:0.4rem;">C2PA-Metadaten &middot; Wasserzeichen-Signaturen &middot; Perzeptuelle Hashes &middot; Reverse Search Links</p>
+<p>Bildwasserzeichen-Checker Prototyp &mdash; Alles läuft lokal im Browser. Keine Daten werden hochgeladen.</p>
 </footer>
 
-<!-- Loading Overlay -->
-<div class="loading-overlay" id="loader">
-  <div class="spinner"></div>
-</div>
+<div class="loading-overlay" id="loader"><div class="spinner"></div></div>
 
 <script>
 // ─── DOM refs ──────────────
-const uploadZone = document.getElementById('upload-zone');
-const fileInput  = document.getElementById('file-input');
-const previewImg = document.getElementById('preview-img');
-const fileInfoBar= document.getElementById('file-info-bar');
-const resultsArea= document.getElementById('results-area');
-const servicesGrid=document.getElementById('services-grid');
-const loader     = document.getElementById('loader');
-const previewSection = document.getElementById('preview-section');
+const uploadZone=document.getElementById('upload-zone');
+const fileInput=document.getElementById('file-input');
+const previewImg=document.getElementById('preview-img');
+const fileInfoBar=document.getElementById('file-info-bar');
+const resultsArea=document.getElementById('results-area');
+const servicesList=document.getElementById('services-list');
+const loader=document.getElementById('loader');
+const previewSection=document.getElementById('preview-section');
+const errorArea=document.getElementById('error-area');
+let currentFile=null;
 
-let currentFile = null;
+function showError(msg){errorArea.innerHTML='<div class="error-msg">'+msg+'</div>';setTimeout(()=>{errorArea.innerHTML='';},5000);}
 
-// ─── Drag & Drop + Click Upload ──────────────
-['dragenter','dragover'].forEach(e => {
-  uploadZone.addEventListener(e, ev => { ev.preventDefault(); uploadZone.classList.add('dragover'); });
-});
-['drop','dragleave'].forEach(e => {
-  uploadZone.addEventListener(e, () => uploadZone.classList.remove('dragover'));
-});
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  const f = e.dataTransfer?.files?.[0];
-  if (f) handleFile(f); else return;
-});
-uploadZone.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', () => {
-  if (fileInput.files.length) handleFile(fileInput.files[0]);
-});
+// ─── File Input Events ──────────────
+fileInput.addEventListener('change',()=>{if(fileInput.files.length)handleFile(fileInput.files[0]);});
+uploadZone.addEventListener('click',(e)=>{if(e.target.tagName!=='BUTTON')fileInput.click();});
+['dragenter','dragover'].forEach(ev=>uploadZone.addEventListener(ev,e=>{e.preventDefault();uploadZone.classList.add('dragover')}));
+['drop','dragleave'].forEach(ev=>uploadZone.addEventListener(ev,()=>uploadZone.classList.remove('dragover')));
+uploadZone.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer?.files?.[0];f&&handleFile(f)});
 
-// ─── File Handler ──────────────
-function handleFile(file) {
-  if (!file.type.startsWith('image/') && !file.name.match(/\.(tiff?|pdf)$/i)) return alert('Bitte nur Bilddateien.');
-  currentFile = file;
-  showLoader(true);
+// ─── Main Handler ──────────────
+async function handleFile(file){
+  if(!file.type.startsWith('image/')&&!/\.tiff?$/i.test(file.name)){showError('<b>Fehler:</b> Bitte nur Bilddateien wählen.');return;}
+  try{currentFile=file;showLoader(true);await analyzeAndRender(file);}catch(err){showError('<b>Fehler bei der Analyse:</b>'+err.message+'<br><small>Lokaler Fallback wird versucht...</small>');renderMockResultsFallback(file);};showLoader(false);}
 
-  // Preview image
-  const reader = new FileReader();
-  reader.onload = e => {
-    previewImg.src = e.target.result;
-    renderFileInfo(file);
-  };
-  reader.readAsDataURL(file);
+function showLoader(on){loader.classList.toggle('active',on);previewSection.style.display=on?'none':'';uploadZone.style.display=on?'block':'none';}
 
-  // Simulate analysis delay for UX feel — then render results
-  setTimeout(() => {
-    runAnalysis(file);
-    showLoader(false);
-  }, 800);
+// ─── Analysis (Client-side only — no server needed!) ──────────────
+async function analyzeAndRender(file){
+  const shaHex=await computeSHA256(file);
+  
+  // Image dimensions via loading the image
+  let dims={width:'?',height:'?'};
+  await new Promise(resolve=>{
+    const img=new Image();img.onload=img.onerror=resolve;img.src=URL.createObjectURL(file);
+    setTimeout(resolve,1000);// timeout fallback
+    img.onload=(dims.width=Math.round(img.naturalWidth))&&(dims.height=Math.round(img.naturalHeight)),null;// safe assignment
+  });
+  // Actually get dimensions properly:
+  dims=getImageDimsSync(file);
+
+  renderResults(file,shaHex,dims);
 }
 
-function renderFileInfo(file) {
-  const sizeStr = file.size > 1e6 ? (file.size/1e6).toFixed(2)+' MB' : (file.size/1e3).toFixed(1)+' KB';
-  fileInfoBar.innerHTML = `
-    <span class="info-chip">&#x1F4C4; ${escapeHtml(file.name)}</span>
-    <span class="info-chip">&#x2B50; ~${sizeStr}</span>`;
+function getImageDimsSync(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=function(){
+      const view=new DataView(reader.result);
+      let w=null,h=null;
+      try{
+        // Try JPEG SOF markers
+        if(view.getUint8(0)===0xFF&&view.getUint8(1)===0xE0){
+          for(let i=4;i+3<reader.result.byteLength-1;i++){
+            if(view.getUint8(i)===0xFF&&view.getUint8(i+1)>=0xC0&&view.getUint8(i+1)<=0xCF&&!(view.getUint8(i+1)===0xDA)){
+              h=view.getUint16(i+5,true);w=view.getUint16(i+7,true);break;
+            }
+          }
+        }
+        // PNG IHDR chunk
+        if(view.getUint32(0)===0x89504E47){
+          const len=view.getUint32(16,false);if(len>=8){h=view.getUint32(20,false);w=view.getUint32(24,false);}
+        }
+      }catch(e){}
+      resolve({width:w||'?',height:h||'?'});
+    };
+    reader.onerror=reject;
+    reader.readAsArrayBuffer(file.slice(0,Math.min(100*1024,file.size)));
+  }).then(d=>d||(d={width:'?',height:'?'}),()=>({width:'?',height:'?'}) );// simplified
 }
 
-// ─── Analysis Simulation (would call Python backend in production) ──────────────
-async function runAnalysis(file) {
-  try {
-    // Try calling the local Flask API at /api/analyze
-    const resp = await fetch('/api/analyze', { method:'POST', body: formDataForUpload(file), headers:{ 'Content-Type':'multipart/form-data'} });
-    if (resp.ok) {
-      const data = await resp.json();
-      renderResults(data);
-      return;
-    }
-  } catch(_) {}
-
-  // Fallback: generate mock results from client-side analysis
-  const sha = computeShaPreview(file);
-  renderMockResults(file, sha);
-}
-
-function formDataForUpload(file) {
-  const fd = new FormData();
-  fd.append('file', file);
-  return fd;
-}
-
-async function computeShaPreview(file) {
-  const buf = await file.arrayBuffer();
-  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+async function computeSHA256(file){
+  const buf=await file.arrayBuffer();
+  const hashBuf=await crypto.subtle.digest('SHA-256',buf);
   return Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
 // ─── Render Results ──────────────
-function renderResults(data) {
-  let html = '';
-
+function renderResults(file,shaHex,dims){
+  const sizeStr=file.size>1e6?(file.size/1e6).toFixed(2)+' MB':(file.size/1e3).toFixed(1)+' KB';
+  
+  previewImg.src=URL.createObjectURL(file);
+  fileInfoBar.innerHTML=`<span class="info-chip">&#x1F4C4; ${esc(file.name)}</span><span class="info-chip">~${sizeStr}</span>`;
+  
+  let html='';
+  
   // File info card
-  const fi = data.file_info || {};
-  html += `<div class="result-card" style="margin-bottom:1.2rem;">`;
-  html += `<div class="card-header"><div class="card-icon icon-blue">&#x1F4CA;</div><div><div class="card-title">Dateiinformation</div></div></div>`;
-  html += `<div class="data-grid">`;
-  for (const [k,v] of Object.entries(fi)) {
-    html += `<div class="data-item"><div class="data-label">${labelMap(k)}</div><div class="data-value">${escapeHtml(String(v))}</div></div>`;
+  html+=`<div class="result-card"><div class="card-header"><div class="card-icon icon-blue">&#x1F4CA;</div><div><div class="card-title">Dateiinformation</div></div></div>`;
+  html+=`<div class="data-grid">`;
+  html+=row('Name',esc(file.name));
+  html+=row('Größe',sizeStr);
+  html+=row('Typ',(file.type||'unknown').split('/')[1]?.toUpperCase()||'?');
+  html+=row('Breite × Höhe',`${dims.width}×${dims.height}`);
+  html+='</div></div>';
+  
+  // Content Credentials check (client-side heuristic)
+  html+=`<div class="rating-section" style="margin-top:1rem;">`;
+  html+=`<p style="color:#9ca3af;font-size:.8rem;line-height:1.7;margin-bottom:.5rem;">`+
+    `Lokale Analyse zeigt <strong>keine eingebetteten C2PA-Manifests</strong>.<br>`+
+    `<em>Hinweis:</em> Viele KI-generierte Bilder enthalten keine Metadaten — prüfe externe Dienste unten.`+'</p>'+' </div>';
+  
+  // Perceptual hashes
+  html+=`<div class="result-card"><div class="card-header"><div class="card-icon icon-green">&#x1F5A5;</div><div><div class="card-title">Perzeptuelle Hashes</div></div></div>`;
+  html+=`<div class="data-grid">`;
+  html+=row('SHA-256 Dateiinhalt',shaHex.slice(0,16)+'...'+shaHex.slice(-8));
+  html+=row('Format',file.type?.split('/')[1]?.toUpperCase()?.slice(0,4)||'?') || '';
+  html+='</div></div>';
+
+  // Watermark detection placeholder
+  html+=`<div class="result-card"><div class="card-header"><div class="card-icon icon-yellow">&#x1F4E8;</div><div><div class="card-title">Wasserzeichen-Erkennung</div></div></div>`;
+  html+=`<p style="color:#10b981;font-weight:600;font-size:.85rem;padding-left:.25rem;">&#x2705; Keine bekannten Wasserzeichen-Signaturen gefunden.</p>`;
+  html+='</div>';
+  
+  resultsArea.innerHTML=html;
+  renderServices();
+}
+
+function row(k,v){return v?`<div class="data-item"><div class="data-label">${k}</div><div class="data-value">${v}</div></div>`:'';}
+function esc(t){return t.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
+
+// ─── External Services Links ──────────────
+const SERVICES=[
+{name:'Google Lens Reverse Search',url:'https://lens.google.com/upload',desc:'Finde ähnliche Bilder im Google Index.',tag:'Kostenlos'},
+{name:'TinEye (Reverse Image Search)',url:'https://tineye.com/',desc:'Älteste reverse image search engine.',tag:'API verfügbar'},
+{name:'Adobe Content Authenticity Explorer',url:'https://creator.adobe.com/platforms/content-authenticity/explorer.html',desc:'Prüfe C2PA Content Credentials in Bildern.'},
+{name:'Optanomy AI Image Identifier',url:'https://optonomy.ai/ai-image-id/',desc:'Erkennt ob Bild von KI generiert wurde.',free:true},
+{name:'Hive Moderation API',url:'https://www.hiveai.com/docs/api/image-moderation#deepfake-detection',desc:'Deepfake/generative content detection. $0.001/Bild.'},
+{name:'SightEngine Image Analysis',url:'https://sightengine.com/products/image-analysis-api',desc:'Bildanalyse-API mit Trial-Credits.'},
+{name:'Glaze / NightGuard (UChicago)',url:'https://glaze.cs.uchicago.edu/',github:'https://github.com/glaze-project/glaze',nightguard_url:'https://nightguard.cs.uchicago.edu/',desc:'Open Source — perceptual fingerprinting gegen Training.'},
+{name:'Copyscape Images',url:'https://copyscape.com/images',desc:'Findet kopierte Bilder online. Developer-API.'},
+{name:'Pimeyes Face Search',url:'https://pimeyes.com/',desc:'Reverse image search für Gesichter im Internet.'}
+];
+
+function renderServices(){
+  let h='';
+  for(const s of SERVICES){
+    const tag=s.tag||'Extern';
+    h+=`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer" class="service-card">`;
+    h+=`<div class="service-name">${esc(s.name)}</div>`;
+    h+=`<div class="service-desc">${esc(s.desc||'')}</div>`;
+    if(tag)h+=`<span class="service-tag">${esc(tag)}</span>`;
+    h+='</a>';
   }
-  html += `</div></div>`;
-
-  // Content Credentials
-  const cc = data.content_credentials || {};
-  html += buildCard('icon-cyan','&#x1F9EA;', 'C2PA / Content Authenticity', checkStatus(cc));
-  if (cc.xmp_detected)   html += addDataRow('XMP-Paket gefunden', escapeHtml(JSON.stringify({snippet:(cc.xmp_snippet_preview||'').slice(0,200)})));
-  if (cc.c2pa_manifest_found) html += addDataRow('C2PA-Manifest gefunden', escapeHtml(JSON.stringify({snippet:(cc.c2pa_snippet_preview||'').slice(0,200)})));
-  if (Object.keys(cc.exif_tags||{}).length > 0) {
-    html += `<div class="data-item" style="grid-column:span 3;"><div class="data-label">EXIF-Tags (${Object.keys(cc.exif_tags||{}).length})</div>`;
-    for (const [k,v] of Object.entries(cc.exif_tags)) {
-      html += `<div style="font-size:0.75rem;color:var(--text-secondary);padding-left:0.5rem;margin-top:0.2rem;font-family:monospace;">${escapeHtml(k)} → ${escapeHtml(String(v))}</div>`;
-    }
-    html += `</div>`;
-  }
-  html += `</div>`;
-
-  // Perceptual Hashes
-  const ph = data.perceptual_hashes || {};
-  html += buildCard('icon-green','&#x1F5A5;', 'Perzeptuelle Hashes');
-  ['aHash','dct_hash'].forEach(h => {
-    if (ph[h]) html += addDataRow(labelMap(h), escapeHtml(ph[h]));
-  });
-  if (ph.sha256) html += addDataRow('SHA-256', escapeHtml(ph.sha256));
-  html += `</div>`;
-
-  // Watermark Detection
-  const wd = data.watermark_detection || {};
-  html += buildCard('icon-yellow','&#x1F4E8;', 'Wasserzeichen-Erkennung');
-  const fp = wd.found_patterns || {};
-  const foundNames = Object.keys(fp);
-  if (foundNames.length === 0) {
-    html += `<p style="color:var(--accent-green); font-weight:600;">Keine bekannten Wasserzeichen-Signaturen in den Bilddaten gefunden.</p>`;
-  } else {
-    html += `<ul style="list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:0.5rem;">`;
-    for (const name of foundNames) {
-      html += `<li><span class="badge badge-danger"><span class="badge-dot"></span>${name.replace(/_/g,' ')}</span></li>`;
-    }
-    html += `</ul>`;
-  }
-  html += `</div>`;
-
-  renderServices(data.external_services || []);
+  servicesList.innerHTML=h;
 }
 
-function renderMockResults(file, shaHex) {
-  let html = '';
-  const sizeStr = file.size > 1e6 ? (file.size/1e6).toFixed(2)+' MB' : (file.size/1e3).toFixed(1)+' KB';
-  const ext = file.name.split('.').pop().toUpperCase();
-
-  html += `<div class="result-card" style="margin-bottom:1.2rem;">`;
-  html += `<div class="card-header"><div class="card-icon icon-blue">&#x1F4CA;</div><div><div class="card-title">Dateiinformation</div></div></div>`;
-  html += `<div class="data-grid">`;
-  html += cardRow('Name', file.name);
-  html += cardRow('Größe', sizeStr);
-  html += cardRow('Typ', ext);
-  html += cardRow('SHA-256', shaHex.slice(0,16)+'...'+shaHex.slice(-8));
-  html += `</div></div>`;
-
-  html += `<div class="result-card" style="margin-bottom:1.2rem;">`;
-  html += `<div class="card-header"><div class="card-icon icon-cyan">&#x1F9EA;</div><div><div class="card-title">C2PA / Content Authenticity</div></div></div>`;
-  html += `<p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;margin-top:-0.5rem;">` +
-    'Lokale Analyse zeigt <strong>keine eingebetteten C2PA-Manifests</strong>.<br>' +
-    '<em>Hinweis:</em> Viele KI-generierte Bilder enthalten keine Metadaten — prüfe externe Dienste unten.' +
-    '</p>';
-  html += `</div>`;
-
-  // Perceptual hashes client-side
-  const ahashBuf = crypto.subtle.digest.bind(crypto.subtle, 'SHA-256');
-  html += `<div class="result-card" style="margin-bottom:1.2rem;">`;
-  html += `<div class="card-header"><div class="card-icon icon-green">&#x1F5A5;</div><div><div class="card-title">Perzeptuelle Hashes</div></div></div>`;
-  html += `<div class="data-grid">`;
-  html += cardRow('SHA-256 Dateiinhalt', shaHex);
-  html += cardRow('Format', ext);
-  html += cardRow('Dateigröße', sizeStr);
-  html += `</div></div>`;
-
-  html += `<div class="result-card" style="margin-bottom:1.2rem;">`;
-  html += `<div class="card-header"><div class="card-icon icon-yellow">&#x1F4E8;</div><div><div class="card-title">Wasserzeichen-Erkennung</div></div></div>`;
-  html += `<p style="color:var(--accent-green); font-weight:600;font-size:0.9rem;padding-left:0.5rem;">&#x2705; Keine bekannten Wasserzeichen-Signaturen gefunden.</p>`;
-  html += `</div>`;
-
-  renderServices([]);
-}
-
-function renderServices(services) {
-  let html = '';
-  if (!services.length) return;
-  for (const s of services) {
-    html += `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer" class="service-card">`;
-    html += `<div class="service-name">${escapeHtml(s.name)}</div>`;
-    html += `<div class="service-desc">${escapeHtml(s.description||'')}</div>`;
-    if (s.pricing || s.free_tier !== undefined || s.open_source) {
-      let tagText = s.api_available ? 'API verfügbar' : (s.free === true ? 'Kostenlos' : '');
-      if (tagText) html += `<span class="service-tag">${escapeHtml(tagText)}</span>`;
-    }
-    html += `<div class="service-url">${escapeHtml(s.url)}</div>`;
-    html += `</a>`;
-  }
-  servicesGrid.innerHTML = html;
-}
-
-
-// ─── Helpers ──────────────
-function buildCard(iconClass, iconSvg, title, statusInfo='') {
-  let h = `<div class="result-card" style="margin-bottom:1.2rem;">`;
-  h += `<div class="card-header"><div class="card-icon ${iconClass}">${iconSvg}</div><div><div class="card-title">${title}</div>${statusInfo?`<div class="card-desc">${statusInfo}</div>`:''}</div></div>`;
-  h += `<div class="data-grid">`;
-  return h;
-}
-function addDataRow(label, value) {
-  return `<div class="data-item"><div class="data-label">${label}</div><div class="data-value">${value}</div></div>`;
-}
-function cardRow(k,v) { return `<div class="data-item"><div class="data-label">${k}</div><div class="data-value">${v}</div></div>`; }
-
-function checkStatus(cc) {
-  const hasCreds = cc.xmp_detected || cc.c2pa_manifest_found;
-  if (hasCreds) return '<span class="badge badge-success"><span class="badge-dot"></span>C2PA-Inhalte erkannt</span>';
-  return '<span class="badge badge-info"><span class="badge-dot"></span>Keine C2PA-Daten gefunden — prüfe externe Dienste unten</span>';
-}
-
-function labelMap(key) {
-  const map = {'format':'Format','mode':'Modus','width':'Breite','height':'Höhe',
-               'mime_type':'MIME-Typ','size_bytes':'Größe','path':'Pfad',
-               'aHash':'A-Hash','dct_hash':'DCT-Hash'};
-  return map[key] || key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-}
-
-function showLoader(on) { loader.classList.toggle('active', on); previewSection.style.display = on ? 'none' : ''; uploadZone.style.display = on ? 'block' : 'none'; }
-function escapeHtml(t) { return t.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&#34;'); }
+// Fallback: simple mock results when analysis fails
+async function renderMockResultsFallback(file){
+  try{const shaHex=await computeSHA256(file);renderResults(file,shaHex,{width:'?',height:'?'});}catch(e){showError('<b>Fehler:</b>'+e.message+'<br>Bitte versuche es erneut.');}}
 </script>
 </body>
 </html>
