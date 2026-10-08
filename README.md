@@ -12,9 +12,8 @@ Prototyp zum Prüfen von Bildern auf Wasserzeichen, C2PA-Metadaten und KI-generi
 ## Installation
 
 ```bash
-cd image-watermark-checker
-pip install -r requirements.txt
-python server.py
+py -m pip install -r requirements.txt
+py server.py
 ```
 
 Dann im Browser öffnen: `http://localhost:5700`

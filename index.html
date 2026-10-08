@@ -145,52 +145,41 @@ uploadZone.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer
 // ─── Main Handler ──────────────
 async function handleFile(file){
   if(!file.type.startsWith('image/')&&!/\.tiff?$/i.test(file.name)){showError('<b>Fehler:</b> Bitte nur Bilddateien wählen.');return;}
-  try{currentFile=file;showLoader(true);await analyzeAndRender(file);}catch(err){showError('<b>Fehler bei der Analyse:</b>'+err.message+'<br><small>Lokaler Fallback wird versucht...</small>');renderMockResultsFallback(file);};showLoader(false);}
+  currentFile=file;
+  showLoader(true);
+  try{
+    await analyzeAndRender(file);
+  }catch(err){
+    showError('<b>Fehler bei der Analyse:</b>'+err.message+'<br><small>Lokaler Fallback wird versucht...</small>');
+    await renderMockResultsFallback(file);
+  }finally{
+    showLoader(false);
+  }
+}
 
-function showLoader(on){loader.classList.toggle('active',on);previewSection.style.display=on?'none':'';uploadZone.style.display=on?'block':'none';}
+function showLoader(on){loader.classList.toggle('active',on);previewSection.style.display=on?'none':'block';uploadZone.style.display=on?'none':'block';}
 
 // ─── Analysis (Client-side only — no server needed!) ──────────────
 async function analyzeAndRender(file){
   const shaHex=await computeSHA256(file);
-  
-  // Image dimensions via loading the image
-  let dims={width:'?',height:'?'};
-  await new Promise(resolve=>{
-    const img=new Image();img.onload=img.onerror=resolve;img.src=URL.createObjectURL(file);
-    setTimeout(resolve,1000);// timeout fallback
-    img.onload=(dims.width=Math.round(img.naturalWidth))&&(dims.height=Math.round(img.naturalHeight)),null;// safe assignment
-  });
-  // Actually get dimensions properly:
-  dims=getImageDimsSync(file);
-
+  const dims=await getImageDimensions(file);
   renderResults(file,shaHex,dims);
 }
 
-function getImageDimsSync(file){
+function getImageDimensions(file){
   return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onload=function(){
-      const view=new DataView(reader.result);
-      let w=null,h=null;
-      try{
-        // Try JPEG SOF markers
-        if(view.getUint8(0)===0xFF&&view.getUint8(1)===0xE0){
-          for(let i=4;i+3<reader.result.byteLength-1;i++){
-            if(view.getUint8(i)===0xFF&&view.getUint8(i+1)>=0xC0&&view.getUint8(i+1)<=0xCF&&!(view.getUint8(i+1)===0xDA)){
-              h=view.getUint16(i+5,true);w=view.getUint16(i+7,true);break;
-            }
-          }
-        }
-        // PNG IHDR chunk
-        if(view.getUint32(0)===0x89504E47){
-          const len=view.getUint32(16,false);if(len>=8){h=view.getUint32(20,false);w=view.getUint32(24,false);}
-        }
-      }catch(e){}
-      resolve({width:w||'?',height:h||'?'});
+    const image=new Image();
+    const objectUrl=URL.createObjectURL(file);
+    image.onload=()=>{
+      URL.revokeObjectURL(objectUrl);
+      resolve({width:image.naturalWidth,height:image.naturalHeight});
     };
-    reader.onerror=reject;
-    reader.readAsArrayBuffer(file.slice(0,Math.min(100*1024,file.size)));
-  }).then(d=>d||(d={width:'?',height:'?'}),()=>({width:'?',height:'?'}) );// simplified
+    image.onerror=()=>{
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Das Bild konnte nicht geladen werden.'));
+    };
+    image.src=objectUrl;
+  });
 }
 
 async function computeSHA256(file){
